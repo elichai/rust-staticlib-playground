@@ -3,21 +3,36 @@ FROM rust:1.87.0-slim-bullseye AS builder
 
 ARG RELEASE=true
 
+ENV CARGO_FLAGS=${RELEASE:+--release}
+ENV TARGET_DIR=${RELEASE:+target/release}
+ENV TARGET_DIR=${TARGET_DIR:-target/debug}
+
 COPY . /app
 WORKDIR /app
 
-RUN cargo build -p rustlib $(if [ "$RELEASE" = "true" ]; then echo "--release"; fi)
+RUN cargo build -p rustlib ${CARGO_FLAGS}
+
+# Copy library to a clean location
+RUN cp "${TARGET_DIR}/librustlib.a" /librustlib.a
+
+
+# Export the library so we can copy it via `--target=export --output=path`
+FROM scratch AS export
+COPY --from=builder /librustlib.a /librustlib.a
 
 # Stage 2: Build and link the caller with Rust 1.90
 FROM rust:1.90-slim-bullseye
 
 ARG RELEASE=true
+ENV CARGO_FLAGS=${RELEASE:+--release}
+ENV TARGET_DIR=${RELEASE:+target/release}
+ENV TARGET_DIR=${TARGET_DIR:-target/debug}
 
 COPY . /app
 WORKDIR /app
 
 # Copy the built static library from the first stage
-RUN mkdir -p target/$(if [ "$RELEASE" = "true" ]; then echo "release"; else echo "debug"; fi)
-COPY --from=builder /app/target/ ./target/
+RUN mkdir -p ${TARGET_DIR}
+COPY --from=export /librustlib.a ${TARGET_DIR}/librustlib.a
 
 RUN cargo build -p caller $(if [ "$RELEASE" = "true" ]; then echo "--release"; fi)

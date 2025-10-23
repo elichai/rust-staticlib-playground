@@ -3,7 +3,12 @@
 This playground demonstrates linking a Rust static library built with one Rust version
 into a binary built with a different Rust version.
 
-To reproduce, run:
+To get the static library for linux x86-64 run:
+```bash
+docker build --platform=linux/amd64 --no-cache --progress=plain --target=export --output=. .
+```
+
+To reproduce the error, run:
 ```bash
 docker build --platform=linux/amd64 --no-cache --progress=plain .
 ```
@@ -22,14 +27,19 @@ docker build --platform=linux/amd64 --no-cache --progress=plain .
 
 ### Docker Multi-Stage Build
 
-The Dockerfile demonstrates cross-version linking with two stages:
+The Dockerfile demonstrates cross-version linking with three stages:
 
 **Stage 1 (builder)**:
 - Rust 1.87 compiles `rustlib` into `librustlib.a`
+- Copies the library to `/librustlib.a` for easy export
 
-**Stage 2**:
+**Stage 2 (export)**:
+- A `scratch` stage that contains only the static library
+- Used to extract the library via `--target=export --output=.`
+
+**Stage 3 (default)**:
 - Rust 1.90 builds the `caller` binary
-- Copies the target directory from Stage 1 with the pre-built library
+- Copies the static library from the export stage
 - `build.rs` finds and links against the library from Stage 1
 
 **Build Arguments**:
