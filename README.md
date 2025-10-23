@@ -31,7 +31,9 @@ The Dockerfile demonstrates cross-version linking with three stages:
 
 **Stage 1 (builder)**:
 - Rust 1.87 compiles `rustlib` into `librustlib.a`
-- Copies the library to `/librustlib.a` for easy export
+- Optionally runs `strip.sh` to strip symbols (if `STRIP=true`)
+  - Uses `objcopy` to keep only symbols matching `rustlib_*`
+  - Removes all other symbols to reduce library size
 
 **Stage 2 (export)**:
 - A `scratch` stage that contains only the static library
@@ -42,6 +44,8 @@ The Dockerfile demonstrates cross-version linking with three stages:
 - Copies the static library from the export stage
 - `build.rs` finds and links against the library from Stage 1
 
-**Build Arguments**:
+**Build Arguments**: (Used via `--build-arg=ARG=VAL`)
 - `RELEASE=true` (default) - Release mode with optimizations
 - `RELEASE=false` - Debug mode
+- `STRIP=true` - Strip all symbols except `rustlib_*` from the static library
+- `STRIP=false` (default) - Keep all symbols in the static library
