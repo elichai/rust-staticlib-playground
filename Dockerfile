@@ -36,3 +36,4 @@ RUN mkdir -p ${TARGET_DIR}
 COPY --from=export /librustlib.a ${TARGET_DIR}/librustlib.a
 
 RUN cargo build -p caller ${CARGO_FLAGS}
+RUN cargo run -p caller ${CARGO_FLAGS}
